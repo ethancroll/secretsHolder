@@ -1,4 +1,6 @@
 const fileInput = document.getElementById("env-file");
+const dropZone = document.getElementById("drop-zone");
+const dropMessage = document.getElementById("drop-message");
 const list = document.getElementById("env-list");
 const emptyState = document.getElementById("empty-state");
 const emptyPanel = document.getElementById("empty-panel");
@@ -16,14 +18,15 @@ function render() {
 
   envEntries.forEach(({ key }, index) => {
     const row = document.createElement("li");
-    row.className = "flex items-center justify-between gap-3 rounded-md border border-slate-200 bg-slate-50 p-3";
+    row.className = "flex items-center justify-between gap-3 rounded-lg border border-neutral-800 bg-[#0a0a0a] p-3";
 
     const name = document.createElement("span");
-    name.className = "truncate font-medium";
+    name.className = "truncate text-sm font-medium text-neutral-200";
     name.textContent = key;
 
     const button = document.createElement("button");
-    button.className = "rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium hover:bg-slate-100";
+    button.className =
+      "rounded-md border border-neutral-700 bg-[#121212] px-3 py-1.5 text-xs font-medium text-neutral-200 transition-colors hover:border-neutral-500 hover:bg-[#1a1a1a]";
     button.dataset.copy = String(index);
     button.textContent = "Copy";
 
@@ -69,6 +72,10 @@ async function loadFile() {
   envEntries.push(...parseEnvText(await file.text()));
   render();
 
+  if (dropMessage) {
+    dropMessage.textContent = file.name;
+  }
+
   status.textContent = envEntries.length
     ? `Loaded ${envEntries.length} variable${envEntries.length === 1 ? "" : "s"} from ${file.name}.`
     : `No valid variables found in ${file.name}.`;
@@ -79,6 +86,36 @@ fileInput.addEventListener("change", () => {
     status.textContent = "Could not read file.";
   });
 });
+
+if (dropZone) {
+  dropZone.addEventListener("click", () => {
+    fileInput.click();
+  });
+
+  dropZone.addEventListener("dragover", (event) => {
+    event.preventDefault();
+    dropZone.classList.add("border-neutral-400");
+  });
+
+  dropZone.addEventListener("dragleave", () => {
+    dropZone.classList.remove("border-neutral-400");
+  });
+
+  dropZone.addEventListener("drop", (event) => {
+    event.preventDefault();
+    dropZone.classList.remove("border-neutral-400");
+
+    const file = event.dataTransfer?.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    const transfer = new DataTransfer();
+    transfer.items.add(file);
+    fileInput.files = transfer.files;
+    fileInput.dispatchEvent(new Event("change"));
+  });
+}
 
 list.addEventListener("click", async (event) => {
   const target = event.target;
@@ -97,13 +134,17 @@ list.addEventListener("click", async (event) => {
     try {
       await navigator.clipboard.writeText(entry.value);
       target.textContent = "Copied";
+      target.classList.add("border-neutral-300", "text-white");
       setTimeout(() => {
         target.textContent = "Copy";
+        target.classList.remove("border-neutral-300", "text-white");
       }, 800);
     } catch {
       target.textContent = "Failed";
+      target.classList.add("border-neutral-300", "text-white");
       setTimeout(() => {
         target.textContent = "Copy";
+        target.classList.remove("border-neutral-300", "text-white");
       }, 800);
     }
   }
